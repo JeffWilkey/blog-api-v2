@@ -28,11 +28,11 @@ function seedPostData() {
 
 function generatePostData() {
   return {
-    title: faker.lorem.words,
-    content: faker.lorem.paragraph,
+    title: faker.lorem.words(),
+    content: faker.lorem.paragraph(),
     author: {
-      firstName: faker.name.firstName,
-      lastName: faker.name.lastName
+      firstName: faker.name.firstName(),
+      lastName: faker.name.lastName()
     }
   }
 }
@@ -100,6 +100,84 @@ describe('Posts API resource', function() {
           expect(resPost.content).to.equal(post.content);
           expect(resPost.author).to.contain(post.author.firstName);
           expect(resPost.author).to.contain(post.author.lastName);
+          expect(resPost.created).to.not.be.null;
+        });
+    });
+  });
+
+  describe('POST endpoint', function() {
+    it('should add a new post', function() {
+
+      const newPost = generatePostData();
+
+      return chai.request(app)
+        .post('/posts')
+        .send(newPost)
+        .then(function(res) {
+          expect(res).to.have.status(201);
+          expect(res).to.be.json;
+          expect(res.body).to.be.a('object');
+          expect(res.body).to.include.keys('id', 'title', 'content', 'author', 'created');
+          expect(res.body.title).to.equal(newPost.title);
+          expect(res.body.id).to.not.be.null;
+          expect(res.body.content).to.equal(newPost.content);
+          expect(res.body.author).to.equal(`${newPost.author.firstName} ${newPost.author.lastName}`);
+
+          return Post.findById(res.body.id);
+        })
+        .then(function(post) {
+          expect(post.title).to.equal(newPost.title);
+          expect(post.content).to.equal(newPost.content);
+          expect(post.author.firstName).to.equal(newPost.author.firstName);
+          expect(post.author.lastName).to.equal(newPost.author.lastName);
+        });
+    });
+  });
+
+  describe('PUT endpoint', function() {
+    it('should update fields you send over', function() {
+      const updateData = {
+        title: 'The Future of Rick and Morty',
+        content: 'Content about the future of Rick and Morty',
+      }
+
+      return Post
+        .findOne()
+        .then(function(post) {
+          updateData.id = post.id;
+
+          return chai.request(app)
+            .put(`/posts/${post.id}`)
+            .send(updateData);
+        })
+        .then(function(res) {
+          expect(res).to.have.status(204);
+
+          return Post.findById(updateData.id);
+        })
+        .then(function(post) {
+          expect(post.title).to.equal(updateData.title);
+          expect(post.content).to.equal(updateData.content);
+        });
+    });
+  });
+
+  describe('DELETE endpoint', function() {
+    it('should delete a post by id', function() {
+      let post;
+
+      return Post
+        .findOne()
+        .then(function(_post) {
+          post = _post;
+          return chai.request(app).delete(`/posts/${post.id}`);
+        })
+        .then(function(res) {
+          expect(res).to.have.status(204);
+          return Post.findById(post.id);
+        })
+        .then(function(_post) {
+          expect(_post).to.be.null;
         });
     });
   });
