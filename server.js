@@ -2,16 +2,24 @@
 
 const express = require('express');
 const mongoose = require('mongoose');
+const morgan = require('morgan');
 
 mongoose.Promise = global.Promise;
 
-
 const { PORT, DATABASE_URL } = require('./config');
-const { Post } = require('./models')
 
 const app = express();
-app.use(express.json());
 
+const postsRouter = require('./postsRouter');
+
+app.use(express.json());
+app.use(morgan('common'))
+
+app.use('/posts', postsRouter);
+
+app.use('*', function (req, res) {
+  res.status(404).json({ message: 'Not Found' });
+});
 
 let server;
 
